@@ -1,36 +1,12 @@
 using System;
 using System.Security;
 
-static class Global
-{
-    public static bool C1 = false,
-        C2 = false,
-        C3 = false,
-        C4 = false,
-        C5 = false,
-        C6 = false,
-        C7 = false;
-
-    public static bool R1 = false,
-        R2 = false,
-        R3 = false,
-        R4 = false;
-
-    public static bool E1 = false,
-        E2 = false;
-
-    public static bool L1 = false,
-        L2 = false,
-        L3 = false,
-        L4 = false;
-}
-
 //återanvändbar kod (LoadingScreen)
 // Jag välde en arrys här pga..
 //     Fast 4 symboler, ändras aldrig
 //     Bättre prestanda
 //     Jag lägger inte till eller tar inte bort något
-class Loadingscreen
+class LoadingScreen
 {
     public static void Hello()
     {
@@ -52,7 +28,7 @@ public class Character
     public int Attack;
     public int Defense;
     public int Gold;
-    public int critChanse = 21;
+    public int CritChance = 21;
     public static bool HasRevive = false;
     public static bool ReviveUsed = false;
     public static bool HasBloodPact = false;
@@ -76,9 +52,9 @@ public class Character
             Health = MaxHealth;
     }
 
-    public bool TakeDamage(int enemyDamage)
+    public bool TakeDamage(int EnemyDamage)
     {
-        Health -= enemyDamage;
+        Health -= EnemyDamage;
         if (Health < 0)
             Health = 0;
 
@@ -155,7 +131,7 @@ namespace RPGGame
                     Rarity = "Common",
                     Price = 35,
                     Description = "+10% crit chance",
-                    Effect = (p) => p.critChanse -= 1,
+                    Effect = (p) => p.CritChance -= 1,
                 },
                 new ShopItem
                 {
@@ -289,7 +265,7 @@ namespace RPGGame
 
 namespace RPGGame
 {
-    class Black
+    class BlackMarket
     {
         public static void Market(Character player)
         {
@@ -312,7 +288,7 @@ namespace RPGGame
                 {
                     Console.Clear();
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("--- THE BLACK MARKET ---");
+                    Console.WriteLine("--- THE BlackMarket MARKET ---");
                     Console.ResetColor();
                     Console.WriteLine(
                         $"Your Gold: {player.Gold} | Your HP: {player.Health}/{player.MaxHealth}\n"
@@ -364,18 +340,18 @@ namespace RPGGame
 
 class Action
 {
-    public static int round = 1;
-    public static int round_enemy_mult = 1;
-    public static int enemyOne = 100;
-    public static int enemyTwo = 100;
-    public static bool extra_def = false;
-    public static int extra_def_round = 0;
+    public static int Round = 1;
+    public static int RoundEnemyMultiplier = 1;
+    public static int EnemyOneHealth = 100;
+    public static int EnemyTwoHealth = 100;
+    public static bool ExtraDefenseActive = false;
+    public static int ExtraDefenseRounds = 0;
     public static float GoldDropMultiplier = 1.0f; //items that increase % gold
     public static int ExtraGoldPerKill = 0; //extra gold per kill
     private const int BaseGoldPerKill = 10; //base gold per kill
-    private const float GoldScalingPerRound = 0.5f; //additional gold per round
+    private const float GoldScalingPerRound = 0.5f; //additional gold per Round
     private const float GoldScalingCap = 35f; //cap for scaling
-    public static int enemyDamage = 10;
+    public static int EnemyDamage = 10;
     public static bool DodgeNextHit = false;
 
     public static bool Defending;
@@ -389,7 +365,7 @@ class Action
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine("=== Combat ===");
             Console.ResetColor();
-            Console.WriteLine($"HP: {player.Health}/{player.MaxHealth} | Round: {round}\n");
+            Console.WriteLine($"HP: {player.Health}/{player.MaxHealth} | Round: {Round}\n");
             Console.WriteLine("Attack | Defend | Run");
             string input = Console.ReadLine().Trim().ToLower();
 
@@ -416,7 +392,7 @@ class Action
                 Console.ReadLine();
             }
 
-            if (enemyOne <= 0 && enemyTwo <= 0)
+            if (EnemyOneHealth <= 0 && EnemyTwoHealth <= 0)
             {
                 CheckRoundEnd(player);
                 return;
@@ -430,7 +406,7 @@ class Action
         Console.WriteLine("Choose target: Skeleton 1 or 2");
         string target = Console.ReadLine();
         int damage = player.Attack;
-        int critMax = Math.Max(2, player.critChanse);
+        int critMax = Math.Max(2, player.CritChance);
         if (new Random().Next(1, critMax) == 1)
         {
             Console.WriteLine("! Critical Hit !"); // fix so that its fixed enemy
@@ -439,13 +415,13 @@ class Action
 
         if (target == "1")
         {
-            enemyOne -= damage;
-            enemyTwo -= damage / 2;
+            EnemyOneHealth -= damage;
+            EnemyTwoHealth -= damage / 2;
         }
         else if (target == "2")
         {
-            enemyTwo -= damage;
-            enemyOne -= damage / 2;
+            EnemyTwoHealth -= damage;
+            EnemyOneHealth -= damage / 2;
         }
         else
         {
@@ -460,13 +436,13 @@ class Action
             Console.WriteLine("Echo attack triggered!");
             Console.ResetColor();
             if (target == "1")
-                enemyOne -= player.Attack;
+                EnemyOneHealth -= player.Attack;
             else
-                enemyTwo -= player.Attack;
+                EnemyTwoHealth -= player.Attack;
         }
 
-        Console.WriteLine($"Skeleton 1 HP: {enemyOne}");
-        Console.WriteLine($"Skeleton 2 HP: {enemyTwo}");
+        Console.WriteLine($"Skeleton 1 HP: {EnemyOneHealth}");
+        Console.WriteLine($"Skeleton 2 HP: {EnemyTwoHealth}");
         Console.WriteLine("Press any key to continue...");
         Console.ReadLine();
 
@@ -475,7 +451,7 @@ class Action
 
     static void EnemyTurn(Character player)
     {
-        if (enemyOne <= 0 && enemyTwo <= 0)
+        if (EnemyOneHealth <= 0 && EnemyTwoHealth <= 0)
             return;
 
         Console.Clear();
@@ -493,7 +469,7 @@ class Action
         if (reduction < 0.2f)
             reduction = 0.2f;
 
-        int dmg = (int)(enemyDamage * reduction);
+        int dmg = (int)(EnemyDamage * reduction);
         if (Defending)
             dmg /= 2;
 
@@ -524,9 +500,9 @@ class Action
 
     static void CheckRoundEnd(Character player)
     {
-        if (enemyOne <= 0 && enemyTwo <= 0)
+        if (EnemyOneHealth <= 0 && EnemyTwoHealth <= 0)
         {
-            float scaling = GoldScalingPerRound * (round - 1);
+            float scaling = GoldScalingPerRound * (Round - 1);
             if (scaling > GoldScalingCap)
                 scaling = GoldScalingCap;
 
@@ -535,15 +511,15 @@ class Action
 
             Console.WriteLine($"Round cleared. Gold +{gold}");
 
-            round++;
-            enemyOne = 100 + round * 5;
-            enemyTwo = 100 + round * 5;
+            Round++;
+            EnemyOneHealth = 100 + Round * 5;
+            EnemyTwoHealth = 100 + Round * 5;
 
-            float scale = 1f + (round - 1) * 0.15f;
+            float scale = 1f + (Round - 1) * 0.15f;
             if (scale > 4f)
                 scale = 4f;
-            enemyDamage = (int)(10 * scale);
-            RPGGame.Black.Market(player);
+            EnemyDamage = (int)(10 * scale);
+            RPGGame.BlackMarket.Market(player);
         }
         else
             Text(player);

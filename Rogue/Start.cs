@@ -6,7 +6,7 @@ Console.WriteLine();
 Console.WriteLine("Press enter to continue");
 Console.ReadLine();
 
-Loadingscreen.Hello();
+LoadingScreen.Hello();
 Console.ReadLine();
 Console.Clear();
 
