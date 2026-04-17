@@ -1,14 +1,15 @@
 using System;
-using System.Security;
 
-//återanvändbar kod (LoadingScreen)
+//återanvändbar kod (Loading.Screen())
 // Jag välde en arrys här pga..
 //     Fast 4 symboler, ändras aldrig
 //     Bättre prestanda
 //     Jag lägger inte till eller tar inte bort något
-class LoadingScreen
+class Loading
 {
-    public static void Hello()
+    // Denna method går igenom alla strings i arrayen så att den visar en Loading
+    // Vilket gör att den snurar runt
+    public static void Screen()
     {
         string[] spinner = { "/", "-", "\\", "|" };
         for (int i = 0; i < 40; i++)
@@ -36,6 +37,7 @@ public class Character
     public static bool HasEchoGloves = false;
     public bool HasSpikedArmor;
 
+    // Hämtar up allt namn, info om Character vi har vält
     public Character(string name, int health, int attack, int defense)
     {
         Name = name;
@@ -45,6 +47,7 @@ public class Character
         Defense = defense;
     }
 
+    // När något healar kommer du inte få over-heal
     public void Heal(int amount)
     {
         Health += amount;
@@ -52,6 +55,8 @@ public class Character
             Health = MaxHealth;
     }
 
+    // Du får damage från denna method, men om din hp är lika/lägre än 0
+    // och du har en specific item så kan du revive med den, annars dör du och förlorar
     public bool TakeDamage(int EnemyDamage)
     {
         Health -= EnemyDamage;
@@ -267,6 +272,7 @@ namespace RPGGame
 {
     class BlackMarket
     {
+        // Här får du köpa items som kan hjälpa dig med ditt run, men om du inte vill så kan du bara lämna shopen
         public static void Market(Character player)
         {
             {
@@ -295,44 +301,52 @@ namespace RPGGame
                     );
                     Console.WriteLine(new string('-', 30));
 
-                    for (int i = 0; i < showcase.Count; i++)
-                    {
-                        Console.WriteLine($"{i + 1}. {showcase[i].Name} [{showcase[i].Rarity}]");
-                        Console.WriteLine($"   Cost: {showcase[i].Price} Gold");
-                        Console.WriteLine($"   Effect: {showcase[i].Description}");
-                        Console.WriteLine(new string('-', 30));
-                    }
+                    ShowItems(showcase);
                     Console.WriteLine("0. Leave Market");
 
-                    Console.Write("\nWhat would you like to buy? ");
-                    string input = Console.ReadLine();
-
-                    if (input == "0")
-                        shopping = false;
-                    else if (
-                        int.TryParse(input, out int choice)
-                        && choice >= 1
-                        && choice <= showcase.Count
-                    )
-                    {
-                        ShopItem selected = showcase[choice - 1];
-
-                        if (player.Gold >= selected.Price)
-                        {
-                            player.Gold -= selected.Price;
-                            selected.Effect(player); // Trigger the code from the Library
-                            Console.WriteLine($"\nYou bought {selected.Name}!");
-                            showcase.RemoveAt(choice - 1); // Remove from shelf after buying
-                        }
-                        else
-                        {
-                            Console.WriteLine("\nYou don't have enough gold for that!");
-                        }
-                        Console.WriteLine("Press any key to continue...");
-                        Console.ReadKey();
-                    }
+                    shopping = DoYouWantToBuy(player, showcase, shopping);
                     Action.Text(player);
                 }
+            }
+        }
+
+        private static bool DoYouWantToBuy(Character player, List<ShopItem> showcase, bool shopping)
+        {
+            Console.Write("\nWhat would you like to buy? ");
+            string input = Console.ReadLine();
+
+            if (input == "0")
+                shopping = false;
+            else if (int.TryParse(input, out int choice) && choice >= 1 && choice <= showcase.Count)
+            {
+                ShopItem selected = showcase[choice - 1];
+
+                if (player.Gold >= selected.Price)
+                {
+                    player.Gold -= selected.Price;
+                    selected.Effect(player); // Trigger the code from the Library
+                    Console.WriteLine($"\nYou bought {selected.Name}!");
+                    showcase.RemoveAt(choice - 1); // Remove from shelf after buying
+                }
+                else
+                {
+                    Console.WriteLine("\nYou don't have enough gold for that!");
+                }
+                Console.WriteLine("Press any key to continue...");
+                Console.ReadKey();
+            }
+
+            return shopping;
+        }
+
+        private static void ShowItems(List<ShopItem> showcase)
+        {
+            for (int i = 0; i < showcase.Count; i++)
+            {
+                Console.WriteLine($"{i + 1}. {showcase[i].Name} [{showcase[i].Rarity}]");
+                Console.WriteLine($"   Cost: {showcase[i].Price} Gold");
+                Console.WriteLine($"   Effect: {showcase[i].Description}");
+                Console.WriteLine(new string('-', 30));
             }
         }
     }
@@ -348,15 +362,16 @@ class Action
     public static int ExtraDefenseRounds = 0;
     public static float GoldDropMultiplier = 1.0f; //items that increase % gold
     public static int ExtraGoldPerKill = 0; //extra gold per kill
-    private const int BaseGoldPerKill = 10; //base gold per kill
-    private const float GoldScalingPerRound = 0.5f; //additional gold per Round
+    private const int BaseGoldPerKill = 20; //base gold per kill
+    private const float GoldScalingPerRound = 0.75f; //additional gold per Round
     private const float GoldScalingCap = 35f; //cap for scaling
     public static int EnemyDamage = 10;
     public static bool DodgeNextHit = false;
-
+    public static bool CritActive = false;
     public static bool Defending;
     private static int defendRounds;
 
+    // En UI for din Combat som visar allt du behöver veta
     public static void Text(Character player)
     {
         while (true)
@@ -369,37 +384,49 @@ class Action
             Console.WriteLine("Attack | Defend | Run");
             string input = Console.ReadLine().Trim().ToLower();
 
-            if (input == "attack")
+            bool flowControl = CheckAction(player, input);
+            if (!flowControl)
             {
-                Character.AttackCounter++;
-                Attack(player);
-            }
-            else if (input == "defend")
-            {
-                Defending = true;
-                defendRounds = 2;
-                Console.WriteLine("Defense stance activated");
-                EnemyTurn(player);
-            }
-            else if (input == "run")
-            {
-                Console.WriteLine("You fled the cave");
-                return;
-            }
-            else
-            {
-                Console.WriteLine("Invalid input");
-                Console.ReadLine();
-            }
-
-            if (EnemyOneHealth <= 0 && EnemyTwoHealth <= 0)
-            {
-                CheckRoundEnd(player);
                 return;
             }
         }
     }
 
+    // Här kan du välja mellan attack, defend eller run.
+    // Run kommer bara sluta spelet och defend ger dig damage reduction
+    private static bool CheckAction(Character player, string input)
+    {
+        if (input == "attack")
+        {
+            Character.AttackCounter++;
+            Attack(player);
+        }
+        else if (input == "defend")
+        {
+            Defending = true;
+            defendRounds = 2;
+            Console.WriteLine("Defense stance activated");
+            EnemyTurn(player);
+        }
+        else if (input == "run")
+        {
+            Console.WriteLine("You fled the cave");
+            return false;
+        }
+        else
+        {
+            Console.WriteLine("Invalid input");
+            Console.ReadLine();
+        }
+        if (EnemyOneHealth <= 0 && EnemyTwoHealth <= 0)
+        {
+            CheckRoundEnd(player);
+            return false;
+        }
+        return true;
+    }
+
+    // Låter dig välja mellan 2 fienden att attackera, efter attack om du har en item så kan du attack 2x
     static void Attack(Character player)
     {
         Console.Clear();
@@ -407,28 +434,7 @@ class Action
         string target = Console.ReadLine();
         int damage = player.Attack;
         int critMax = Math.Max(2, player.CritChance);
-        if (new Random().Next(1, critMax) == 1)
-        {
-            Console.WriteLine("! Critical Hit !"); // fix so that its fixed enemy
-            damage *= 3;
-        }
-
-        if (target == "1")
-        {
-            EnemyOneHealth -= damage;
-            EnemyTwoHealth -= damage / 2;
-        }
-        else if (target == "2")
-        {
-            EnemyTwoHealth -= damage;
-            EnemyOneHealth -= damage / 2;
-        }
-        else
-        {
-            Console.WriteLine("Not valid Target");
-            Console.ReadLine();
-            Attack(player);
-        }
+        ChooseEnemyToAttack(player, target, damage, critMax);
 
         if (Character.HasEchoGloves && Character.AttackCounter % 3 == 0)
         {
@@ -449,6 +455,48 @@ class Action
         EnemyTurn(player);
     }
 
+    // Attack träffar 2 personer men gör andra fienden få mindre damage och du har en chanse att få crit
+    private static void ChooseEnemyToAttack(
+        Character player,
+        string target,
+        int damage,
+        int critMax
+    )
+    {
+        if (new Random().Next(1, critMax) == 1)
+            CritActive = true;
+
+        if (target == "1")
+        {
+            if (CritActive == true)
+            {
+                EnemyOneHealth -= damage * 3;
+                CritActive = false;
+            }
+            else
+                EnemyOneHealth -= damage;
+            EnemyTwoHealth -= damage / 2;
+        }
+        else if (target == "2")
+        {
+            if (CritActive == true)
+            {
+                EnemyTwoHealth -= damage * 3;
+                CritActive = false;
+            }
+            else
+                EnemyTwoHealth -= damage;
+            EnemyOneHealth -= damage / 2;
+        }
+        else
+        {
+            Console.WriteLine("Not valid Target");
+            Console.ReadLine();
+            Attack(player);
+        }
+    }
+
+    // Kållar om dina fienden är döda, om inte attackerar men kan dodga den, damage reduction och extra om du väljde defende
     static void EnemyTurn(Character player)
     {
         if (EnemyOneHealth <= 0 && EnemyTwoHealth <= 0)
@@ -472,7 +520,12 @@ class Action
         int dmg = (int)(EnemyDamage * reduction);
         if (Defending)
             dmg /= 2;
+        HealthDeduction(player, dmg);
+    }
 
+    // här tar du damagen och kållar om du är död eller inte
+    private static void HealthDeduction(Character player, int dmg)
+    {
         player.TakeDamage(dmg);
         Console.WriteLine($"You took {dmg} damage");
         Console.WriteLine($"Your health is {player.Health}");
@@ -498,6 +551,8 @@ class Action
         return;
     }
 
+    // När dinna enemys är död så kommer du få gold, resetar enemys och buffar de, och tar dig till market,
+    // om fiende är inte död forsäter den från combat
     static void CheckRoundEnd(Character player)
     {
         if (EnemyOneHealth <= 0 && EnemyTwoHealth <= 0)
