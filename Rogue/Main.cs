@@ -94,6 +94,8 @@ namespace RPGGame
 
     public static class ItemLibrary
     {
+        // välde List pga..
+        // Item läggs till och tast bort, kan använda .add() osv
         public static List<ShopItem> GetFullInventory()
         {
             return new List<ShopItem>
@@ -276,7 +278,7 @@ namespace RPGGame
         public static void Market(Character player)
         {
             {
-                // Jag bygger up Inventory så det kommer lägga tills och tas bort
+                // Jag bygger up Inventory så det kommer lägga tills och tas bort, därför använder jag list
                 // Jag använder metoder i items
 
                 Random rnd = new Random();

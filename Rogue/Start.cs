@@ -59,7 +59,7 @@ while (choose == true)
 
     Console.WriteLine("-- Juggernaut --");
     Console.WriteLine(" Weapon: Dual Axes (rare)");
-    Console.WriteLine(" Armor: Heavy (epic)");
+    Console.WriteLine(" Armor: Heavy (epic)"); // armor level 5
     Console.WriteLine();
 
     Character vanguard = new Character("Vanguard", 120, 40, 4);
